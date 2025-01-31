@@ -125,20 +125,12 @@ class Challenge:
             expose_cfg = cast(
                 Dict[str, Any], next(iter(self.config["expose"].values()))[0]
             )
-            shortcuts["host"] = expose_cfg.get("http", expose_cfg.get("host", None))
-            has_url = False
+
+            shortcuts["host"] = expose_cfg.get("http", expose_cfg.get("tcp", None))
             if "tcp" in expose_cfg:
-                shortcuts["port"] = expose_cfg["tcp"]
-                shortcuts["nc"] = f"nc {shortcuts['host']} {shortcuts['port']}"
-                shortcuts["url"] = f"http://{shortcuts['host']}:{shortcuts['port']}"
-                has_url = True
+                shortcuts["nc"] = f"ncat {shortcuts['host']} 1337 --ssl"
             if "http" in expose_cfg:
                 shortcuts["url"] = f"https://{shortcuts['host']}"
-                has_url = True
-            if has_url:
-                shortcuts[
-                    "link"
-                ] = f"[{_strip_scheme(shortcuts['url'])}]({shortcuts['url']})"
 
         return shortcuts
 
