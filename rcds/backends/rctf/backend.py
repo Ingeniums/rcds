@@ -121,6 +121,7 @@ class ScoreboardBackend(rcds.backend.BackendScoreboard):
             "name",
             "author",
             "category",
+            "difficulty",
             "flag",
             "tiebreakEligible",
             "sortWeight",
