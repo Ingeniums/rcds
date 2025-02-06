@@ -79,6 +79,18 @@ properties:
       Whether or not this challenge should be shown on the scoreboard.
     default: true
 
+  instancePerTeam:
+    type: boolean
+    description: >-
+      Whether or not this challenge should be instantiated once per team (using klodd).
+    default: false
+
+  instanceTimeout:
+    type: integer
+    description: >-
+      Timeout for instance per team challenges in milliseconds.
+    default: 300000
+
   # Static assets
   provide:
     type: array

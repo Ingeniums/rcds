@@ -1,0 +1,81 @@
+{% import '_helpers.jinja' as helpers with context %}
+apiVersion: "klodd.tjcsec.club/v1"
+kind: Challenge
+metadata:
+  name: {{ challenge.id }}
+  namespace: {{ namespace }}
+  labels:
+    {{ helpers.common_labels() | indent(4) }}
+spec:
+  name: {{ challenge.name }}
+  timeout: {{ challenge.instanceTimeout }}
+  pods:
+  {% for pod_name, pod_config in challenge.containers.items() %}
+    - name: {{ pod_name }}
+      {% if pod_config.challenge.ports %}
+      ports:
+      {% for port in pod_config.challenge.ports %}
+        - port: {{ port }}
+      {% endfor %}
+      {% endif %}
+      spec:
+        containers:
+          - name: main
+            image: {{ pod_config.challenge.image }}
+            {% if pod_config.challenge.environment %}
+            env:
+            {% for name, value in pod_config.challenge.environment.items() %}
+              - name: {{ name }}
+                value: {{ value | quote }}
+            {% endfor %}
+            {% endif %}
+            {% if pod_config.challenge.resources %}
+            resources:
+              {{ pod_config.challenge.resources | yaml(12) }}
+            {% endif %}
+            securityContext:
+              allowPrivilegeEscalation: {{ pod_config.challenge.privileged }}
+              privileged: {{ pod_config.challenge.privileged }}
+              readOnlyRootFilesystem: {{ pod_config.challenge.readOnlyRootFilesystem }}
+            {% if pod_config.challenge.tmpfsMounts | first is defined %}
+            volumeMounts:
+              {% for tmpfsMount in pod_config.challenge.tmpfsMounts %}
+              - name: {{ tmpfsMount }}
+                mountPath: {{ tmpfsMount }}
+              {% endfor %}
+            {% endif %}
+            {% if has_healthcheck %}
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 45281
+              initialDelaySeconds: 45
+              timeoutSeconds: 3
+              periodSeconds: 30
+            readinessProbe:
+              httpGet:
+                path: /healthz
+                port: 45281
+              initialDelaySeconds: 5
+              timeoutSeconds: 3
+              periodSeconds: 5
+            {% endif %}
+          {% if has_healthcheck %}
+          - name: healthcheck
+            image: {{ pod_config.healthcheck.image }}
+            resources:
+              limits:
+                cpu: 1000m
+              requests:
+                cpu: 50m
+            securityContext:
+              allowPrivilegeEscalation: false
+              privileged: false
+              readOnlyRootFilesystem: false
+          {% endif %}
+        automountServiceAccountToken: false
+  {% endfor %}
+  expose:
+    kind: {{ exposed.kind }}
+    pod: {{ exposed.name }}
+    port: {{ exposed.config.target }}

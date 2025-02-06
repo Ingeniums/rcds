@@ -69,5 +69,9 @@ properties:
     description: >-
       (Optional) regex to validate all flags against. Will be surrounded with `^$`.
     format: regex
+  instancerUrl:
+    type: string
+    description: >-
+      (Optional) URL to the instancer to use for challenges.
 required:
 - backends

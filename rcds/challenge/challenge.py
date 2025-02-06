@@ -126,11 +126,18 @@ class Challenge:
                 Dict[str, Any], next(iter(self.config["expose"].values()))[0]
             )
 
-            shortcuts["host"] = expose_cfg.get("http", expose_cfg.get("tcp", None))
-            if "tcp" in expose_cfg:
-                shortcuts["nc"] = f"ncat {shortcuts['host']} 1337 --ssl"
-            if "http" in expose_cfg:
-                shortcuts["url"] = f"https://{shortcuts['host']}"
+            if self.config["instancePerTeam"]:
+                assert "instancerUrl" in self.project.config, "instancerUrl not set"
+                instancer_url = self.project.config["instancerUrl"]
+                shortcuts["instancer"] = (
+                    f"{instancer_url}/challenge/{self.config['id']}"
+                )
+            else:
+                shortcuts["host"] = expose_cfg.get("http", expose_cfg.get("tcp", None))
+                if "tcp" in expose_cfg:
+                    shortcuts["nc"] = f"ncat {shortcuts['host']} 1337 --ssl"
+                if "http" in expose_cfg:
+                    shortcuts["url"] = f"https://{shortcuts['host']}"
 
         return shortcuts
 

@@ -74,28 +74,58 @@ class ContainerBackend(rcds.backend.BackendContainerRuntime):
         challenge_env: Environment = self._jinja_env.overlay()
         challenge_env.globals["challenge"] = challenge.config
         challenge_env.globals["namespace"] = self.get_namespace_for_challenge(challenge)
-        challenge_env.globals["hidden"] = "false" if challenge.config["visible"] else "true"
+        challenge_env.globals["hidden"] = (
+            "false" if challenge.config["visible"] else "true"
+        )
+
+        instance_per_team = challenge.config["instancePerTeam"]
 
         render_and_append(challenge_env, "namespace.yaml")
-        render_and_append(challenge_env, "network-policy.yaml")
 
-        for container_name, container_config in challenge.config["containers"].items():
-            expose_config = challenge.config.get("expose", dict()).get(
-                container_name, None
-            )
+        if instance_per_team:
+            exposed_services = challenge.config.get("expose", dict())
+            assert (
+                len(exposed_services) == 1
+            ), "Only one port should be exposed in instance-per-team mode"
 
-            container_env: Environment = challenge_env.overlay()
-            container_env.globals["container"] = {
-                "name": container_name,
-                "config": container_config,
+            exposed_name, exposed_cfgs = list(exposed_services.items())[0]
+            assert (
+                len(exposed_cfgs) == 1
+            ), "Only one port should be exposed in instance-per-team mode"
+            exposed_cfg = exposed_cfgs[0]
+            exposed_kind = "http" if "http" in exposed_cfg else "tcp"
+
+            challenge_env.globals["exposed"] = {
+                "name": exposed_name,
+                "config": exposed_cfg,
+                "kind": exposed_kind,
             }
-            if expose_config is not None:
-                container_env.globals["container"]["expose"] = expose_config
 
-            render_and_append(container_env, "deployment.yaml")
-            render_and_append(container_env, "service.yaml")
-            render_and_append(container_env, "ingressroute.yaml")
-            render_and_append(container_env, "ingressroutetcp.yaml")
+            render_and_append(challenge_env, "challenge.yaml")
+
+        else:
+
+            render_and_append(challenge_env, "network-policy.yaml")
+
+            for container_name, container_config in challenge.config[
+                "containers"
+            ].items():
+                expose_config = challenge.config.get("expose", dict()).get(
+                    container_name, None
+                )
+
+                container_env: Environment = challenge_env.overlay()
+                container_env.globals["container"] = {
+                    "name": container_name,
+                    "config": container_config,
+                }
+                if expose_config is not None:
+                    container_env.globals["container"]["expose"] = expose_config
+
+                render_and_append(container_env, "deployment.yaml")
+                render_and_append(container_env, "service.yaml")
+                render_and_append(container_env, "ingressroute.yaml")
+                render_and_append(container_env, "ingressroutetcp.yaml")
 
         return manifests
 
